@@ -140,6 +140,14 @@
     .mobile-controls [data-dir="down"] { grid-area: 2 / 2; }
     .mobile-controls [data-dir="right"] { grid-area: 2 / 3; }
 
+    @media (any-pointer: coarse) {
+      .mobile-controls { display: grid; }
+    }
+
+    @media (max-width: 1024px) {
+      .mobile-controls { display: grid; }
+    }
+
     @media (max-width: 620px) {
       body { padding-top: 20px; }
       .masthead { align-items: start; }
