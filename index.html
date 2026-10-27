@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2ead8">
+  <title>Callen's Canvas Escape</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f2ead8;
+      --ink: #263b32;
+      --muted: #64746a;
+      --rust: #c45c3c;
+      --frame: #69412d;
+      --leaf: #68846b;
+      --sun: #f0c75e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px clamp(16px, 4vw, 56px) 24px;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#8e795b20 0.7px, transparent 0.7px);
+      background-size: 8px 8px;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    button { font: inherit; }
+
+    .page { width: min(1050px, 100%); margin: 0 auto; }
+
+    .masthead {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow, .label, .help, .brush-count, .message, .mobile-controls button {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--rust);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 0; font-size: clamp(27px, 4vw, 42px); font-weight: 500; line-height: 1; }
+
+    .brush-count {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0 3px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .brush-icons { color: #b6a88b; font-size: 20px; letter-spacing: 2px; }
+    .brush-icons span.collected { color: #d69932; }
+
+    .frame {
+      position: relative;
+      padding: clamp(10px, 1.6vw, 17px);
+      border: 1px solid #4d3025;
+      border-radius: 3px;
+      background-color: var(--frame);
+      background-image: repeating-linear-gradient(3deg, transparent 0 7px, #d69a5222 8px, transparent 10px 17px), linear-gradient(110deg, #815237, #553626 45%, #754a30);
+      box-shadow: 0 14px 30px #49332038, inset 0 0 0 3px #b07a4a, inset 0 0 0 5px #422b21;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 900 / 560;
+      border: 2px solid #302c25;
+      background: #d7d4a0;
+      touch-action: none;
+    }
+
+    .underbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 13px 2px 0;
+    }
+
+    .message { min-height: 20px; color: var(--ink); font-size: 13px; }
+    .help { color: var(--muted); font-size: 12px; text-align: right; }
+
+    .reset {
+      display: inline-grid;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid #a7987a;
+      border-radius: 50%;
+      color: var(--ink);
+      background: #fffaf0;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      font-size: 20px;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .reset:hover { transform: rotate(-35deg); background: white; }
+    .reset:focus-visible, .mobile-controls button:focus-visible { outline: 3px solid #c45c3c; outline-offset: 3px; }
+
+    .mobile-controls {
+      display: none;
+      grid-template: repeat(2, 42px) / repeat(3, 48px);
+      justify-content: center;
+      gap: 5px;
+      margin: 15px auto 0;
+      touch-action: none;
+    }
+
+    .mobile-controls button {
+      border: 1px solid #a7987a;
+      border-radius: 4px;
+      color: var(--ink);
+      background: #fffaf0;
+      font-size: 19px;
+    }
+
+    .mobile-controls [data-dir="up"] { grid-area: 1 / 2; }
+    .mobile-controls [data-dir="left"] { grid-area: 2 / 1; }
+    .mobile-controls [data-dir="down"] { grid-area: 2 / 2; }
+    .mobile-controls [data-dir="right"] { grid-area: 2 / 3; }
+
+    @media (max-width: 620px) {
+      body { padding-top: 20px; }
+      .masthead { align-items: start; }
+      .brush-count { gap: 6px; font-size: 12px; }
+      .brush-icons { font-size: 17px; }
+      .underbar { align-items: start; }
+      .help { max-width: 190px; line-height: 1.5; }
+      .mobile-controls { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">A tiny adventure under the bed</p>
+        <h1>Callen's Canvas Escape</h1>
+      </div>
+      <div class="brush-count" aria-live="polite">
+        <span class="label">Brushes</span>
+        <span class="brush-icons" id="brushIcons" aria-label="0 of 3 collected">○ ○ ○</span>
+        <span id="brushTotal">0 / 3</span>
+      </div>
+    </header>
+
+    <section class="frame" aria-label="Game canvas framed in wood">
+      <canvas id="game" width="900" height="560" aria-label="Top-down game. Move Baby Callen with the arrow keys or WASD, collect three paintbrushes, and reach the portal."></canvas>
+    </section>
+
+    <div class="underbar">
+      <div class="message" id="message" aria-live="polite">Find the three paintbrushes. Watch out for the dust bunnies!</div>
+      <div class="help">Move with arrow keys or WASD · Avoid bunnies · Paint slows you down</div>
+      <button class="reset" id="reset" type="button" aria-label="Restart game" title="Restart game">↻</button>
+    </div>
+
+    <div class="mobile-controls" aria-label="Touch movement controls">
+      <button type="button" data-dir="up" aria-label="Move up">↑</button>
+      <button type="button" data-dir="left" aria-label="Move left">←</button>
+      <button type="button" data-dir="down" aria-label="Move down">↓</button>
+      <button type="button" data-dir="right" aria-label="Move right">→</button>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    const ctx = canvas.getContext("2d");
+    const brushIcons = document.querySelector("#brushIcons");
+    const brushTotal = document.querySelector("#brushTotal");
+    const message = document.querySelector("#message");
+    const width = 900;
+    const height = 560;
+    const keys = new Set();
+    const start = { x: 82, y: 278 };
+    const brushSpots = [{ x: 225, y: 105 }, { x: 462, y: 438 }, { x: 728, y: 164 }];
+    const paints = [
+      { x: 330, y: 205, rx: 66, ry: 35, color: "#d87563" },
+      { x: 585, y: 360, rx: 78, ry: 30, color: "#7d88a9" },
+      { x: 745, y: 465, rx: 55, ry: 26, color: "#d9b746" }
+    ];
+    const bricks = [{ x: 167, y: 426 }, { x: 514, y: 122 }, { x: 800, y: 278 }];
+    let player;
+    let brushes;
+    let bunnies;
+    let won;
+    let graceUntil;
+    let lastTime = 0;
+    let elapsed = 0;
+
+    function reset() {
+      player = { ...start };
+      brushes = [false, false, false];
+      bunnies = [
+        { x: 365, y: 340, vx: 105, vy: 74, phase: 0 },
+        { x: 641, y: 224, vx: -83, vy: 112, phase: 1.7 },
+        { x: 790, y: 112, vx: 95, vy: -72, phase: 3.1 }
+      ];
+      won = false;
+      graceUntil = elapsed + 1.5;
+      keys.clear();
+      updateHud("Find the three paintbrushes. Watch out for the dust bunnies!");
+    }
+
+    function updateHud(text) {
+      const count = brushes.filter(Boolean).length;
+      brushIcons.innerHTML = brushes.map((collected) => `<span class="${collected ? "collected" : ""}">${collected ? "✦" : "○"}</span>`).join(" ");
+      brushIcons.setAttribute("aria-label", `${count} of 3 collected`);
+      brushTotal.textContent = `${count} / 3`;
+      message.textContent = text;
+    }
+
+    function resize() {
+      const bounds = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(bounds.width * dpr);
+      canvas.height = Math.round(bounds.height * dpr);
+      ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+      draw();
+    }
+
+    function roundedRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = "#d8d69e";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#50664f";
+      ctx.fillRect(0, 0, width, 15);
+      ctx.fillRect(0, height - 15, width, 15);
+      ctx.fillRect(0, 0, 15, height);
+      ctx.fillRect(width - 15, 0, 15, height);
+
+      for (let y = 31; y < height - 20; y += 28) {
+        for (let x = 30 + ((y / 28) % 2) * 13; x < width - 20; x += 32) {
+          ctx.fillStyle = "#6e784d18";
+          ctx.beginPath();
+          ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = "#fff8d5";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(90, 50); ctx.bezierCurveTo(240, 14, 310, 78, 440, 48);
+      ctx.moveTo(100, 510); ctx.bezierCurveTo(280, 475, 390, 540, 545, 500);
+      ctx.stroke();
+      ctx.restore();
+
+      paints.forEach((paint) => {
+        ctx.fillStyle = paint.color;
+        ctx.globalAlpha = 0.72;
+        ctx.beginPath();
+        ctx.ellipse(paint.x, paint.y, paint.rx, paint.ry, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#fff4d080";
+        ctx.beginPath();
+        ctx.ellipse(paint.x - 12, paint.y - 6, paint.rx * 0.54, paint.ry * 0.28, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        [[-0.8, 0.6], [0.8, -0.6], [0.4, 0.9]].forEach(([dx, dy]) => {
+          ctx.beginPath();
+          ctx.arc(paint.x + dx * paint.rx, paint.y + dy * paint.ry, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+
+      bricks.forEach((brick, i) => {
+        ctx.save();
+        ctx.translate(brick.x, brick.y);
+        ctx.rotate(i % 2 ? 0.3 : -0.22);
+        ctx.fillStyle = "#c6543e";
+        roundedRect(-17, -11, 34, 22, 4); ctx.fill();
+        ctx.fillStyle = "#e78361";
+        ctx.fillRect(-12, -15, 9, 6); ctx.fillRect(3, -15, 9, 6);
+        ctx.restore();
+      });
+    }
+
+    function drawBrush(spot, index) {
+      const bob = Math.sin(elapsed * 3 + index * 2) * 4;
+      ctx.save();
+      ctx.translate(spot.x, spot.y + bob);
+      ctx.shadowColor = "#ffe46d";
+      ctx.shadowBlur = 17;
+      ctx.strokeStyle = "#fff0a3";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-9, 12); ctx.lineTo(9, -10);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#ae6336";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-9, 12); ctx.lineTo(9, -10);
+      ctx.stroke();
+      ctx.fillStyle = "#f6d05d";
+      ctx.beginPath();
+      ctx.ellipse(11, -12, 4, 7, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPortal() {
+      const open = brushes.every(Boolean);
+      const pulse = 0.5 + Math.sin(elapsed * 4) * 0.5;
+      ctx.save();
+      ctx.translate(853, 280);
+      ctx.fillStyle = "#513b30";
+      ctx.beginPath();
+      ctx.arc(0, 0, 33, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.lineTo(0, -33); ctx.lineTo(0, 33); ctx.fill();
+      if (open) {
+        ctx.shadowColor = "#ffe16a";
+        ctx.shadowBlur = 15 + pulse * 17;
+        ctx.fillStyle = `rgba(255, 224, 112, ${0.62 + pulse * 0.25})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, Math.PI * 0.5, Math.PI * 1.5);
+        ctx.lineTo(0, -26); ctx.lineTo(0, 26); ctx.fill();
+      } else {
+        ctx.strokeStyle = "#aa9871";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 25, Math.PI * 0.5, Math.PI * 1.5);
+        ctx.lineTo(0, -25); ctx.lineTo(0, 25); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawBunny(bunny) {
+      const bob = Math.sin(elapsed * 8 + bunny.phase) * 2;
+      ctx.save();
+      ctx.translate(bunny.x, bunny.y + bob);
+      ctx.fillStyle = "#75665a";
+      ctx.beginPath();
+      ctx.ellipse(-10, -12, 6, 12, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(4, -14, 6, 13, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ad9b83";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 20, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e0d2b4";
+      ctx.beginPath();
+      ctx.arc(-14, -5, 3, 0, Math.PI * 2);
+      ctx.arc(14, -5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPlayer() {
+      ctx.save();
+      ctx.font = "38px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "#31403566";
+      ctx.shadowBlur = 6;
+      ctx.fillText("👶", player.x, player.y + 1);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      drawBackground();
+      drawPortal();
+      brushes.forEach((collected, index) => {
+        if (!collected) drawBrush(brushSpots[index], index);
+      });
+      bunnies.forEach(drawBunny);
+      drawPlayer();
+      if (won) {
+        ctx.fillStyle = "#20372ec9";
+        ctx.fillRect(15, 15, width - 30, height - 30);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff5d5";
+        ctx.font = "42px Georgia, serif";
+        ctx.fillText("Out of the frame!", width / 2, height / 2 - 7);
+        ctx.font = "18px Trebuchet MS, sans-serif";
+        ctx.fillText("Callen made it back to the real world.", width / 2, height / 2 + 30);
+      }
+    }
+
+    function update(delta) {
+      if (won) return;
+      elapsed += delta;
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const inPaint = paints.some((paint) => ((player.x - paint.x) / (paint.rx + 8)) ** 2 + ((player.y - paint.y) / (paint.ry + 8)) ** 2 < 1);
+      const speed = inPaint ? 105 : 190;
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(34, Math.min(width - 34, player.x + directionX / magnitude * speed * delta));
+      player.y = Math.max(35, Math.min(height - 35, player.y + directionY / magnitude * speed * delta));
+
+      bunnies.forEach((bunny) => {
+        bunny.x += bunny.vx * delta;
+        bunny.y += bunny.vy * delta;
+        if (bunny.x < 45 || bunny.x > width - 45) bunny.vx *= -1;
+        if (bunny.y < 48 || bunny.y > height - 48) bunny.vy *= -1;
+        if (elapsed >= graceUntil && Math.hypot(player.x - bunny.x, player.y - bunny.y) < 33) {
+          reset();
+          updateHud("A dust bunny caught Callen. Try the canvas again!");
+          return;
+        }
+      });
+
+      brushSpots.forEach((spot, index) => {
+        if (!brushes[index] && Math.hypot(player.x - spot.x, player.y - spot.y) < 31) {
+          brushes[index] = true;
+          const count = brushes.filter(Boolean).length;
+          updateHud(count === 3 ? "The portal is open! Make a dash for the frame." : `Paintbrush found. ${3 - count} more to go!`);
+        }
+      });
+
+      if (brushes.every(Boolean) && player.x > 817 && Math.abs(player.y - 280) < 42) {
+        won = true;
+        updateHud("You made it out! Press restart for another round.");
+      }
+    }
+
+    function loop(time) {
+      const delta = Math.min((time - lastTime) / 1000 || 0, 0.04);
+      lastTime = time;
+      update(delta);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    const keyMap = { ArrowUp: "ArrowUp", ArrowDown: "ArrowDown", ArrowLeft: "ArrowLeft", ArrowRight: "ArrowRight", w: "w", a: "a", s: "s", d: "d" };
+    window.addEventListener("keydown", (event) => {
+      const key = keyMap[event.key] || keyMap[event.key.toLowerCase()];
+      if (key) { event.preventDefault(); keys.add(key); }
+    });
+    window.addEventListener("keyup", (event) => {
+      const key = keyMap[event.key] || keyMap[event.key.toLowerCase()];
+      if (key) keys.delete(key);
+    });
+    window.addEventListener("blur", () => keys.clear());
+    document.querySelector("#reset").addEventListener("click", reset);
+    document.querySelectorAll(".mobile-controls button").forEach((button) => {
+      const direction = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" }[button.dataset.dir];
+      button.addEventListener("pointerdown", (event) => { event.preventDefault(); keys.add(direction); button.setPointerCapture(event.pointerId); });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach((name) => button.addEventListener(name, () => keys.delete(direction)));
+    });
+
+    reset();
+    window.addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
