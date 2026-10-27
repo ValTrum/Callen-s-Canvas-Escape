@@ -119,11 +119,19 @@
     .reset:focus-visible, .mobile-controls button:focus-visible { outline: 3px solid #c45c3c; outline-offset: 3px; }
 
     .mobile-controls {
-      display: none;
+      position: fixed;
+      z-index: 5;
+      left: max(16px, env(safe-area-inset-left));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      display: grid;
       grid-template: repeat(2, 42px) / repeat(3, 48px);
       justify-content: center;
       gap: 5px;
-      margin: 15px auto 0;
+      padding: 6px;
+      border: 1px solid #a7987a;
+      border-radius: 6px;
+      background: #f2ead8e8;
+      box-shadow: 0 2px 8px #49332030;
       touch-action: none;
     }
 
@@ -140,14 +148,6 @@
     .mobile-controls [data-dir="down"] { grid-area: 2 / 2; }
     .mobile-controls [data-dir="right"] { grid-area: 2 / 3; }
 
-    @media (any-pointer: coarse) {
-      .mobile-controls { display: grid; }
-    }
-
-    @media (max-width: 1024px) {
-      .mobile-controls { display: grid; }
-    }
-
     @media (max-width: 620px) {
       body { padding-top: 20px; }
       .masthead { align-items: start; }
@@ -155,7 +155,6 @@
       .brush-icons { font-size: 17px; }
       .underbar { align-items: start; }
       .help { max-width: 190px; line-height: 1.5; }
-      .mobile-controls { display: grid; }
     }
   </style>
 </head>
