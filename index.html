@@ -148,6 +148,19 @@
     .mobile-controls [data-dir="down"] { grid-area: 2 / 2; }
     .mobile-controls [data-dir="right"] { grid-area: 2 / 3; }
 
+    .version {
+      position: fixed;
+      z-index: 4;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      padding: 5px 8px;
+      border: 1px solid #a7987a;
+      border-radius: 3px;
+      color: var(--muted);
+      background: #f2ead8e8;
+      font: 11px "Trebuchet MS", Arial, sans-serif;
+    }
+
     @media (max-width: 620px) {
       body { padding-top: 20px; }
       .masthead { align-items: start; }
@@ -188,6 +201,7 @@
       <button type="button" data-dir="down" aria-label="Move down">↓</button>
       <button type="button" data-dir="right" aria-label="Move right">→</button>
     </div>
+    <div class="version" aria-label="Version 1.0.1">v1.0.1</div>
   </main>
 
   <script>
