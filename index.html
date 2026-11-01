@@ -175,7 +175,7 @@
   <main class="page">
     <header class="masthead">
       <div>
-        <p class="eyebrow">A tiny adventure under the bed</p>
+        <p class="eyebrow" id="levelLabel">Level 1 · A tiny adventure under the bed</p>
         <h1>Callen's Canvas Escape</h1>
       </div>
       <div class="brush-count" aria-live="polite">
@@ -186,12 +186,12 @@
     </header>
 
     <section class="frame" aria-label="Game canvas framed in wood">
-      <canvas id="game" width="900" height="560" aria-label="Top-down game. Move Baby Callen with the arrow keys or WASD, collect three paintbrushes, and reach the portal."></canvas>
+      <canvas id="game" width="900" height="560" aria-label="Level 1: collect three paintbrushes and reach the portal."></canvas>
     </section>
 
     <div class="underbar">
       <div class="message" id="message" aria-live="polite">Find the three paintbrushes. Watch out for the dust bunnies!</div>
-      <div class="help">Move with arrow keys or WASD · Avoid bunnies · Paint slows you down</div>
+      <div class="help" id="help">Move with arrow keys or WASD · Avoid bunnies · Paint slows you down</div>
       <button class="reset" id="reset" type="button" aria-label="Restart game" title="Restart game">↻</button>
     </div>
 
@@ -210,6 +210,9 @@
     const brushIcons = document.querySelector("#brushIcons");
     const brushTotal = document.querySelector("#brushTotal");
     const message = document.querySelector("#message");
+    const levelLabel = document.querySelector("#levelLabel");
+    const help = document.querySelector("#help");
+    const gameCanvas = document.querySelector("#game");
     const width = 900;
     const height = 560;
     const keys = new Set();
@@ -222,15 +225,32 @@
     ];
     const bricks = [{ x: 167, y: 426 }, { x: 514, y: 122 }, { x: 800, y: 278 }];
     let player;
+    let daddy;
+    let hunters;
     let brushes;
     let bunnies;
+    let level;
     let won;
+    let sliding;
+    let slideProgress;
+    let carX;
+    let inCar;
+    let police;
+    let attendants;
+    let arriving;
+    let arrivalProgress;
+    let climbing;
+    let climbProgress;
+    let fireworks;
     let graceUntil;
     let lastTime = 0;
     let elapsed = 0;
 
     function reset() {
+      level = 1;
       player = { ...start };
+      daddy = null;
+      hunters = [];
       brushes = [false, false, false];
       bunnies = [
         { x: 365, y: 340, vx: 105, vy: 74, phase: 0 },
@@ -238,9 +258,161 @@
         { x: 790, y: 112, vx: 95, vy: -72, phase: 3.1 }
       ];
       won = false;
+      sliding = false;
+      slideProgress = 0;
+      carX = 0;
+      inCar = false;
+      police = [];
+      attendants = [];
+      arriving = false;
+      arrivalProgress = 0;
+      climbing = false;
+      climbProgress = 0;
+      fireworks = [];
       graceUntil = elapsed + 1.5;
       keys.clear();
+      levelLabel.textContent = "Level 1 · A tiny adventure under the bed";
+      help.textContent = "Move with arrow keys or WASD · Avoid bunnies · Paint slows you down";
+      gameCanvas.setAttribute("aria-label", "Level 1: collect three paintbrushes and reach the portal.");
       updateHud("Find the three paintbrushes. Watch out for the dust bunnies!");
+    }
+
+    function startRoomLevel() {
+      level = 2;
+      player = { x: 140, y: 385 };
+      daddy = { x: 45, y: 385 };
+      graceUntil = elapsed + 1.2;
+      levelLabel.textContent = "Level 2 · The room beyond the frame";
+      help.textContent = "Crawl with arrow keys or WASD · Reach the open door before Daddy catches up";
+      gameCanvas.setAttribute("aria-label", "Level 2: crawl Baby Callen to the open doorway while Daddy chases.");
+      updateHud("Daddy is right behind you! Crawl to the open door!");
+    }
+
+    function resetRoofLevel(text) {
+      player = { x: 170, y: 245 };
+      hunters = [
+        { name: "Hunter", x: 34, y: 190, shirt: "#527fa5", hair: "#6b503d", speed: 165 },
+        { name: "Freya", x: 42, y: 305, shirt: "#bd6f83", hair: "#8d503c", speed: 170 }
+      ];
+      sliding = false;
+      slideProgress = 0;
+      graceUntil = elapsed + 1.1;
+      updateHud(text);
+    }
+
+    function startRoofLevel() {
+      level = 3;
+      levelLabel.textContent = "Level 3 · The rooftop run";
+      help.textContent = "Move with arrow keys or WASD · Reach the slide to land in the front garden";
+      gameCanvas.setAttribute("aria-label", "Level 3: escape Hunter and Freya on the rooftop and slide into the front garden.");
+      resetRoofLevel("Hunter and Freya are after you! Get to the slide!");
+    }
+
+    function resetGardenLevel(text) {
+      player = { x: 145, y: 430 };
+      hunters = [
+        { name: "Leo", x: 28, y: 365, shirt: "#d18b4c", hair: "#654839", speed: 158 },
+        { name: "Hunter", x: 38, y: 430, shirt: "#527fa5", hair: "#6b503d", speed: 165 },
+        { name: "Freya", x: 28, y: 495, shirt: "#bd6f83", hair: "#8d503c", speed: 170 }
+      ];
+      carX = 770;
+      inCar = false;
+      graceUntil = elapsed + 1.2;
+      updateHud(text);
+    }
+
+    function startGardenLevel() {
+      level = 4;
+      levelLabel.textContent = "Level 4 · The front garden";
+      help.textContent = "Move with arrow keys or WASD · Reach the car before Leo, Hunter, and Freya catch up";
+      gameCanvas.setAttribute("aria-label", "Level 4: reach the car in the front garden while Leo, Hunter, and Freya chase.");
+      resetGardenLevel("Leo, Hunter, and Freya are right behind you! Get to the car!");
+    }
+
+    function resetPoliceLevel(text) {
+      player = { x: 130, y: 430 };
+      police = [
+        { x: 28, y: 345, speed: 142, phase: 0 },
+        { x: 42, y: 500, speed: 148, phase: 1.4 }
+      ];
+      inCar = true;
+      graceUntil = elapsed + 1.2;
+      keys.clear();
+      updateHud(text);
+    }
+
+    function startPoliceLevel() {
+      level = 5;
+      levelLabel.textContent = "Level 5 · The airport dash";
+      help.textContent = "Steer with arrow keys or WASD · Reach the Australia airport";
+      gameCanvas.setAttribute("aria-label", "Level 5: drive to the airport while police cars follow.");
+      resetPoliceLevel("The police are following! Drive to the airport!");
+    }
+
+    function resetFlightLevel(text) {
+      player = { x: 450, y: 485 };
+      attendants = [
+        { name: "Crew 1", x: 370, y: 520, shirt: "#416c78", hair: "#504139", speed: 138 },
+        { name: "Crew 2", x: 530, y: 520, shirt: "#4e7780", hair: "#76503e", speed: 144 }
+      ];
+      arriving = false;
+      arrivalProgress = 0;
+      inCar = false;
+      graceUntil = elapsed + 1.3;
+      keys.clear();
+      updateHud(text);
+    }
+
+    function startFlightLevel() {
+      level = 6;
+      levelLabel.textContent = "Level 6 · Australia to New York";
+      help.textContent = "Crawl to the front of the plane while the flight attendants follow";
+      gameCanvas.setAttribute("aria-label", "Level 6: crawl through the airplane cabin to arrive in New York.");
+      resetFlightLevel("The flight attendants spotted Callen! Head toward New York!");
+    }
+
+    function resetParkLevel(text) {
+      player = { x: 105, y: 455 };
+      hunters = [{ name: "President Donald Trump", x: 100, y: 350, shirt: "#263f67", hair: "#d8b655", speed: 155 }];
+      graceUntil = elapsed + 1.4;
+      keys.clear();
+      updateHud(text);
+    }
+
+    function startParkLevel() {
+      level = 7;
+      levelLabel.textContent = "Level 7 · The park run";
+      help.textContent = "Run through the park to the statue while President Donald Trump chases";
+      gameCanvas.setAttribute("aria-label", "Level 7: run through Battery Park to the Statue of Liberty while President Donald Trump chases.");
+      resetParkLevel("Welcome to New York! President Donald Trump is chasing Callen through the park!");
+    }
+
+    function startClimbLevel() {
+      level = 8;
+      player = { x: 680, y: 435 };
+      hunters = [];
+      climbing = true;
+      climbProgress = 0;
+      keys.clear();
+      levelLabel.textContent = "Level 8 · Climb the statue";
+      help.textContent = "Hold ↑ or W to climb toward Barack Obama and the crown";
+      gameCanvas.setAttribute("aria-label", "Level 8: climb the Statue of Liberty to meet Barack Obama at the top.");
+      updateHud("Barack Obama is waiting at the top! Hold ↑ or W to climb!");
+    }
+
+    function startHarborView() {
+      level = 9;
+      won = false;
+      fireworks = [
+        { x: 180, y: 125, phase: 0.08, color: "#f2cd62" },
+        { x: 465, y: 95, phase: 0.42, color: "#f17e73" },
+        { x: 730, y: 145, phase: 0.73, color: "#94d4ca" }
+      ];
+      levelLabel.textContent = "New York Harbor";
+      help.textContent = "A view of the harbor beneath the fireworks";
+      gameCanvas.setAttribute("aria-label", "Fireworks over New York Harbor from the Statue of Liberty.");
+      keys.clear();
+      updateHud("Callen reached the top! Fireworks light up New York Harbor!");
     }
 
     function updateHud(text) {
@@ -282,7 +454,7 @@
           ctx.fill();
         }
       }
-
+          ctx.fillRect(100, 342, 800, 218);
       ctx.save();
       ctx.globalAlpha = 0.2;
       ctx.strokeStyle = "#fff8d5";
@@ -321,6 +493,529 @@
         ctx.fillRect(-12, -15, 9, 6); ctx.fillRect(3, -15, 9, 6);
         ctx.restore();
       });
+    }
+
+    function drawRoomBackground() {
+      ctx.fillStyle = "#d8e6d0";
+      ctx.fillRect(0, 0, width, 355);
+      ctx.fillStyle = "#bd8057";
+      ctx.fillRect(0, 355, width, height - 355);
+      ctx.fillStyle = "#eee0bc";
+      ctx.fillRect(0, 340, width, 15);
+      ctx.fillStyle = "#a96f4d";
+      for (let y = 380; y < height; y += 42) {
+        ctx.fillRect(0, y, width, 2);
+        for (let x = (y % 3) * 70; x < width; x += 210) ctx.fillRect(x, y - 40, 2, 42);
+      }
+
+      ctx.fillStyle = "#f6efdb";
+      roundedRect(492, 52, 150, 128, 5); ctx.fill();
+      ctx.fillStyle = "#96c7c1";
+      roundedRect(500, 60, 134, 112, 2); ctx.fill();
+      ctx.fillStyle = "#f8d879";
+      ctx.beginPath(); ctx.arc(600, 91, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#f6efdb";
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(567, 60); ctx.lineTo(567, 172); ctx.moveTo(500, 116); ctx.lineTo(634, 116); ctx.stroke();
+
+      ctx.fillStyle = "#69412d";
+      roundedRect(35, 83, 112, 150, 3); ctx.fill();
+      ctx.fillStyle = "#e4d7a4";
+      ctx.fillRect(43, 91, 96, 134);
+      ctx.fillStyle = "#8ca77c";
+      ctx.fillRect(49, 97, 84, 122);
+      ctx.fillStyle = "#f4d16e";
+      ctx.beginPath(); ctx.arc(89, 143, 23, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e08a69";
+      ctx.beginPath(); ctx.ellipse(89, 168, 22, 12, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#a36d50";
+      roundedRect(220, 256, 143, 84, 5); ctx.fill();
+      ctx.fillStyle = "#d6a177";
+      roundedRect(211, 245, 161, 21, 4); ctx.fill();
+      ctx.fillStyle = "#79563e";
+      ctx.fillRect(231, 329, 10, 25); ctx.fillRect(343, 329, 10, 25);
+
+      ctx.fillStyle = "#6e594b";
+      ctx.beginPath(); ctx.ellipse(467, 447, 180, 51, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#d7a27b";
+      ctx.beginPath(); ctx.ellipse(467, 447, 166, 39, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#704631";
+      ctx.fillRect(790, 164, 110, 266);
+      ctx.fillStyle = "#f7d888";
+      ctx.fillRect(800, 174, 100, 246);
+      ctx.fillStyle = "#9bc7b9";
+      ctx.fillRect(810, 185, 90, 225);
+      ctx.fillStyle = "#fff0bd";
+      ctx.beginPath(); ctx.arc(868, 237, 36, Math.PI, 0); ctx.lineTo(904, 410); ctx.lineTo(810, 410); ctx.lineTo(810, 237); ctx.fill();
+      ctx.fillStyle = "#eabf61";
+      ctx.beginPath(); ctx.arc(845, 214, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#704631";
+      ctx.fillRect(786, 158, 12, 278); ctx.fillRect(786, 158, 114, 12); ctx.fillRect(786, 430, 114, 12);
+    }
+
+    function drawRoofBackground() {
+      ctx.fillStyle = "#91cbd0";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f1d16f";
+      ctx.beginPath(); ctx.arc(790, 78, 35, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#f4f0dc";
+      [[145, 86], [492, 112], [687, 160]].forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.ellipse(x, y, 42, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(x - 20, y + 3, 21, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 19, y + 3, 24, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = "#ead5aa";
+      ctx.fillRect(250, 300, 650, 260);
+      ctx.fillStyle = "#e4c28e";
+      ctx.fillRect(290, 337, 75, 69);
+      ctx.fillRect(690, 337, 78, 69);
+      ctx.fillStyle = "#8bbcc0";
+      ctx.fillRect(299, 346, 57, 50);
+      ctx.fillRect(699, 346, 60, 50);
+      ctx.strokeStyle = "#f4e5c4";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(327, 346); ctx.lineTo(327, 396); ctx.moveTo(299, 371); ctx.lineTo(356, 371);
+      ctx.moveTo(729, 346); ctx.lineTo(729, 396); ctx.moveTo(699, 371); ctx.lineTo(759, 371);
+      ctx.stroke();
+
+      ctx.fillStyle = "#77a867";
+      ctx.fillRect(0, 420, width, height - 420);
+      ctx.fillStyle = "#8cbd72";
+      ctx.fillRect(0, 420, width, 18);
+      ctx.fillStyle = "#d8c39a";
+      ctx.beginPath(); ctx.moveTo(780, 485); ctx.lineTo(900, 458); ctx.lineTo(900, 530); ctx.lineTo(800, 520); ctx.fill();
+      ctx.fillStyle = "#477c50";
+      [[90, 445], [170, 451], [230, 438], [855, 439], [880, 452]].forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fill();
+      });
+      [[42, 500], [105, 530], [205, 492], [870, 520]].forEach(([x, y], i) => {
+        ctx.fillStyle = i % 2 ? "#e47776" : "#f2d45f";
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fff4dd";
+        for (let petal = 0; petal < 5; petal++) {
+          const angle = petal * Math.PI * 2 / 5;
+          ctx.beginPath(); ctx.arc(x + Math.cos(angle) * 8, y + Math.sin(angle) * 8, 3, 0, Math.PI * 2); ctx.fill();
+        }
+      });
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(80, 182); ctx.lineTo(445, 54); ctx.lineTo(835, 182); ctx.lineTo(800, 342); ctx.lineTo(115, 342);
+      ctx.closePath();
+      ctx.fillStyle = "#b85c4c";
+      ctx.fill();
+      ctx.clip();
+      ctx.strokeStyle = "#d17a61";
+      ctx.lineWidth = 2;
+      for (let y = 110; y < 360; y += 27) {
+        ctx.beginPath(); ctx.moveTo(70, y); ctx.lineTo(850, y); ctx.stroke();
+        for (let x = 70 + (y % 2) * 35; x < 850; x += 70) {
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 35, y + 27); ctx.stroke();
+        }
+      }
+      ctx.restore();
+      ctx.fillStyle = "#75463b";
+      ctx.fillRect(108, 337, 700, 12);
+      ctx.fillStyle = "#e7b77a";
+      ctx.fillRect(108, 349, 700, 5);
+    }
+
+    function drawGardenBackground() {
+      ctx.fillStyle = "#9bcfd2";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f2d879";
+      ctx.beginPath(); ctx.arc(790, 78, 31, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#e8d1a5";
+      ctx.fillRect(70, 105, 500, 207);
+      ctx.fillStyle = "#ae594b";
+      ctx.beginPath(); ctx.moveTo(34, 128); ctx.lineTo(316, 27); ctx.lineTo(608, 128); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#d37b61";
+      ctx.lineWidth = 3;
+      for (let y = 93; y < 145; y += 14) {
+        ctx.beginPath(); ctx.moveTo(110, y + 30); ctx.lineTo(525, y + 30); ctx.stroke();
+      }
+      ctx.fillStyle = "#91c1c0";
+      ctx.fillRect(145, 153, 82, 68);
+      ctx.fillRect(428, 153, 82, 68);
+      ctx.strokeStyle = "#f7edce";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(186, 153); ctx.lineTo(186, 221); ctx.moveTo(145, 187); ctx.lineTo(227, 187);
+      ctx.moveTo(469, 153); ctx.lineTo(469, 221); ctx.moveTo(428, 187); ctx.lineTo(510, 187);
+      ctx.stroke();
+      ctx.fillStyle = "#647c58";
+      roundedRect(290, 190, 62, 122, 3); ctx.fill();
+      ctx.fillStyle = "#d6a64e";
+      ctx.beginPath(); ctx.arc(338, 254, 4, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#79a96b";
+      ctx.fillRect(0, 300, width, height - 300);
+      ctx.fillStyle = "#8fbd76";
+      ctx.fillRect(0, 300, width, 15);
+      ctx.fillStyle = "#f5efdd";
+      for (let x = 0; x < width; x += 38) {
+        ctx.fillRect(x, 281, 7, 45);
+        ctx.beginPath(); ctx.moveTo(x - 5, 281); ctx.lineTo(x + 3, 268); ctx.lineTo(x + 12, 281); ctx.fill();
+      }
+      ctx.fillRect(0, 294, width, 6);
+      ctx.fillRect(0, 323, width, 6);
+
+      ctx.beginPath();
+      ctx.moveTo(315, 310);
+      ctx.quadraticCurveTo(520, 360, 770, 430);
+      ctx.lineTo(790, 510);
+      ctx.quadraticCurveTo(500, 406, 290, 340);
+      ctx.closePath();
+      ctx.fillStyle = "#d9c49b";
+      ctx.fill();
+      ctx.strokeStyle = "#ead9b5";
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(330, 330); ctx.quadraticCurveTo(535, 380, 778, 462); ctx.stroke();
+
+      ctx.fillStyle = "#477c50";
+      [[42, 354], [91, 360], [575, 347], [625, 359], [868, 352], [817, 350]].forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 24, 0, Math.PI * 2); ctx.fill();
+      });
+      [[50, 455], [102, 515], [238, 365], [540, 488], [880, 500]].forEach(([x, y], i) => {
+        ctx.fillStyle = i % 2 ? "#e47776" : "#f2d45f";
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fff4dd";
+        for (let petal = 0; petal < 5; petal++) {
+          const angle = petal * Math.PI * 2 / 5;
+          ctx.beginPath(); ctx.arc(x + Math.cos(angle) * 7, y + Math.sin(angle) * 7, 3, 0, Math.PI * 2); ctx.fill();
+        }
+      });
+    }
+
+    function drawRoadBackground() {
+      ctx.fillStyle = "#9bcfd2";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f2d879";
+      ctx.beginPath(); ctx.arc(110, 75, 28, 0, Math.PI * 2); ctx.fill();
+      [[40, 100, 100, 150], [165, 135, 120, 115], [320, 95, 92, 155], [450, 145, 130, 105], [600, 110, 80, 140]].forEach(([x, y, w, h], i) => {
+        ctx.fillStyle = ["#d6b985", "#e4d1a6", "#c6d0b1"][i % 3];
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = "#8cb9b7";
+        for (let windowY = y + 18; windowY < y + h - 10; windowY += 34) {
+          for (let windowX = x + 14; windowX < x + w - 10; windowX += 29) ctx.fillRect(windowX, windowY, 12, 17);
+        }
+      });
+
+      ctx.fillStyle = "#eee2c3";
+      roundedRect(690, 82, 195, 188, 5); ctx.fill();
+      ctx.fillStyle = "#b76450";
+      ctx.fillRect(684, 75, 207, 16);
+      ctx.fillStyle = "#3e5f67";
+      roundedRect(724, 101, 127, 34, 3); ctx.fill();
+      ctx.fillStyle = "#fff4d8";
+      ctx.font = "bold 18px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("AIRPORT", 787, 125);
+      ctx.fillStyle = "#8ebcbd";
+      for (let x = 706; x < 874; x += 36) ctx.fillRect(x, 158, 25, 74);
+      ctx.fillStyle = "#f5f0dc";
+      ctx.font = "bold 11px Trebuchet MS, sans-serif";
+      ctx.fillText("AUSTRALIA", 787, 250);
+
+      ctx.fillStyle = "#91b678";
+      ctx.fillRect(0, 250, width, 35);
+      ctx.fillStyle = "#c3b28e";
+      ctx.fillRect(0, 250, width, 18);
+      ctx.fillStyle = "#50595b";
+      ctx.fillRect(0, 285, width, height - 285);
+      ctx.fillStyle = "#f2d879";
+      for (let x = 0; x < width; x += 104) ctx.fillRect(x + 16, 418, 55, 4);
+      ctx.fillStyle = "#778274";
+      ctx.fillRect(0, 279, width, 6);
+      ctx.fillStyle = "#6e995f";
+      [[65, 238], [290, 242], [560, 239], [650, 239]].forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 24, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = "#fff0c8";
+      ctx.font = "bold 14px Trebuchet MS, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("SYDNEY  →  AIRPORT", 30, 310);
+    }
+
+    function drawFlightBackground() {
+      ctx.fillStyle = "#9bcfd2";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#e7e8df";
+      roundedRect(20, 12, 860, 536, 95); ctx.fill();
+      ctx.strokeStyle = "#81999b";
+      ctx.lineWidth = 5;
+      roundedRect(20, 12, 860, 536, 95); ctx.stroke();
+
+      [98, 188, 278, 368, 458].forEach((y) => {
+        [36, 836].forEach((x) => {
+          ctx.save();
+          roundedRect(x, y, 28, 54, 12); ctx.clip();
+          ctx.fillStyle = arriving ? "#75b6c4" : "#8ec9d1";
+          ctx.fillRect(x, y, 28, 54);
+          if (arriving) {
+            ctx.fillStyle = "#4e7586";
+            [[x + 2, y + 28, 8, 26], [x + 11, y + 18, 8, 36], [x + 20, y + 32, 7, 22]].forEach(([bx, by, bw, bh]) => ctx.fillRect(bx, by, bw, bh));
+          } else {
+            ctx.fillStyle = "#f4f0dc";
+            ctx.beginPath(); ctx.ellipse(x + 12, y + 22, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+          ctx.strokeStyle = "#879c9c";
+          ctx.lineWidth = 3;
+          roundedRect(x, y, 28, 54, 12); ctx.stroke();
+        });
+      });
+
+      ctx.fillStyle = "#d8c39c";
+      roundedRect(365, 25, 170, 510, 15); ctx.fill();
+      ctx.fillStyle = "#f1e7ce";
+      for (let y = 55; y < 520; y += 42) ctx.fillRect(445, y, 10, 14);
+      ctx.fillStyle = "#4b6267";
+      roundedRect(390, 25, 120, 42, 8); ctx.fill();
+      ctx.fillStyle = "#fff4d8";
+      ctx.font = "bold 11px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("AUSTRALIA  →  NEW YORK", 450, 51);
+
+      for (let y = 92; y < 500; y += 70) {
+        [88, 158, 228, 592, 662, 732].forEach((x) => {
+          ctx.fillStyle = "#476b76";
+          roundedRect(x, y, 58, 48, 8); ctx.fill();
+          ctx.fillStyle = "#79a3a4";
+          roundedRect(x + 5, y + 5, 48, 19, 6); ctx.fill();
+          ctx.fillStyle = "#d7c49c";
+          roundedRect(x + 6, y + 28, 46, 14, 4); ctx.fill();
+        });
+      }
+
+      ctx.fillStyle = "#f6f0dc";
+      roundedRect(385, 75, 130, 13, 5); ctx.fill();
+      ctx.fillStyle = arriving ? "#517d80" : "#9dbeb6";
+      ctx.font = "bold 10px Trebuchet MS, sans-serif";
+      ctx.fillText(arriving ? "NEW YORK" : "IN FLIGHT", 450, 85);
+    }
+
+    function drawParkBackground() {
+      ctx.fillStyle = "#9bcfd2";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f2d879";
+      ctx.beginPath(); ctx.arc(790, 78, 30, 0, Math.PI * 2); ctx.fill();
+      [[0, 155, 95, 155], [108, 120, 110, 190], [232, 150, 88, 160], [334, 98, 118, 212], [465, 142, 92, 168], [570, 110, 110, 200]].forEach(([x, y, w, h], i) => {
+        ctx.fillStyle = ["#819da1", "#91aeb0", "#78969c"][i % 3];
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = "#bad2cc";
+        for (let windowY = y + 18; windowY < y + h - 8; windowY += 30) {
+          for (let windowX = x + 12; windowX < x + w - 8; windowX += 25) ctx.fillRect(windowX, windowY, 10, 14);
+        }
+      });
+
+      ctx.fillStyle = "#79a96b";
+      ctx.fillRect(0, 240, width, height - 240);
+      ctx.fillStyle = "#8fbd76";
+      ctx.fillRect(0, 240, width, 15);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(20, 485); ctx.quadraticCurveTo(275, 420, 470, 455); ctx.quadraticCurveTo(590, 475, 695, 432);
+      ctx.strokeStyle = "#d7c39a";
+      ctx.lineWidth = 72;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.strokeStyle = "#eee1c1";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
+
+      [[55, 279, 31], [224, 324, 27], [378, 281, 31], [542, 329, 25]].forEach(([x, y, radius], i) => {
+        ctx.fillStyle = "#76543d";
+        ctx.fillRect(x - 6, y + 9, 12, 46);
+        ctx.fillStyle = i % 2 ? "#4e8052" : "#47794c";
+        ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.fillStyle = "#785a45";
+      roundedRect(398, 361, 75, 12, 4); ctx.fill();
+      ctx.fillRect(407, 371, 6, 25); ctx.fillRect(457, 371, 6, 25);
+      ctx.fillStyle = "#f5efdd";
+      ctx.font = "bold 14px Trebuchet MS, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("BATTERY PARK", 26, 278);
+      [[34, 535], [180, 388], [310, 520], [510, 515], [600, 390]].forEach(([x, y], i) => {
+        ctx.fillStyle = i % 2 ? "#e47776" : "#f2d45f";
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fff4dd";
+        for (let petal = 0; petal < 5; petal++) {
+          const angle = petal * Math.PI * 2 / 5;
+          ctx.beginPath(); ctx.arc(x + Math.cos(angle) * 7, y + Math.sin(angle) * 7, 3, 0, Math.PI * 2); ctx.fill();
+        }
+      });
+    }
+
+    function drawStatue() {
+      ctx.fillStyle = "#8b7b62";
+      ctx.fillRect(668, 470, 172, 70);
+      ctx.fillStyle = "#b59d78";
+      ctx.fillRect(650, 454, 208, 22);
+      ctx.fillRect(680, 436, 148, 18);
+      ctx.fillStyle = "#729989";
+      ctx.beginPath();
+      ctx.moveTo(704, 441); ctx.lineTo(714, 346); ctx.lineTo(728, 311); ctx.lineTo(749, 296);
+      ctx.lineTo(773, 309); ctx.lineTo(793, 348); ctx.lineTo(806, 441); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#547b70";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(735, 330); ctx.lineTo(747, 435); ctx.moveTo(774, 330); ctx.lineTo(785, 435); ctx.stroke();
+      ctx.strokeStyle = "#729989";
+      ctx.lineWidth = 17;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(779, 321); ctx.lineTo(803, 247); ctx.lineTo(794, 177); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(721, 330); ctx.lineTo(695, 370); ctx.stroke();
+      ctx.fillStyle = "#729989";
+      ctx.beginPath(); ctx.arc(752, 275, 21, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(742, 287, 20, 20);
+      ctx.fillStyle = "#557b71";
+      for (let spike = 0; spike < 7; spike++) {
+        const x = 736 + spike * 5;
+        ctx.beginPath(); ctx.moveTo(x, 263); ctx.lineTo(x + 2, 247 - (spike % 2) * 5); ctx.lineTo(x + 5, 264); ctx.fill();
+      }
+      ctx.fillStyle = "#607f75";
+      roundedRect(684, 367, 24, 42, 3); ctx.fill();
+      ctx.fillStyle = "#d7d1b3";
+      ctx.beginPath(); ctx.arc(794, 164, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e8c66a";
+      ctx.beginPath(); ctx.moveTo(784, 160); ctx.quadraticCurveTo(794, 136, 803, 160); ctx.quadraticCurveTo(798, 157, 794, 165); ctx.quadraticCurveTo(790, 158, 784, 160); ctx.fill();
+      ctx.fillStyle = "#8b7b62";
+      ctx.fillRect(683, 530, 144, 10);
+    }
+
+    function drawObama() {
+      ctx.save();
+      ctx.translate(828, 204);
+      ctx.fillStyle = "#263b32";
+      ctx.beginPath(); ctx.ellipse(0, 15, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#283848";
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-5, 9); ctx.lineTo(-7, 22); ctx.moveTo(5, 9); ctx.lineTo(7, 22); ctx.stroke();
+      ctx.fillStyle = "#24394d";
+      roundedRect(-11, -16, 22, 27, 6); ctx.fill();
+      ctx.fillStyle = "#b84c48";
+      ctx.beginPath(); ctx.moveTo(-2, -14); ctx.lineTo(2, -14); ctx.lineTo(1, 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#704631";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-9, -8); ctx.lineTo(-15, 1); ctx.moveTo(9, -8); ctx.lineTo(15, -20); ctx.stroke();
+      ctx.fillStyle = "#895a42";
+      ctx.beginPath(); ctx.arc(0, -27, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#292b2a";
+      ctx.beginPath(); ctx.arc(0, -30, 10, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.font = "bold 10px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#fff8e6";
+      ctx.strokeText("Barack Obama", 0, -45);
+      ctx.fillStyle = "#263b32";
+      ctx.fillText("Barack Obama", 0, -45);
+      ctx.restore();
+    }
+
+    function drawHarborBackground() {
+      const sky = ctx.createLinearGradient(0, 0, 0, height);
+      sky.addColorStop(0, "#14263d");
+      sky.addColorStop(0.7, "#405a70");
+      sky.addColorStop(0.7001, "#203a50");
+      sky.addColorStop(1, "#142b40");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#f4eed7";
+      [[80, 80], [250, 140], [395, 62], [570, 155], [840, 94]].forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.fillStyle = "#182c3f";
+      const skyline = [[245, 220, 68, 150], [320, 175, 75, 195], [405, 205, 58, 165], [472, 132, 88, 238], [570, 190, 65, 180], [645, 155, 70, 215], [725, 205, 82, 165], [815, 177, 80, 193]];
+      skyline.forEach(([x, y, w, h]) => {
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = "#e4bf70";
+        for (let windowY = y + 15; windowY < y + h - 10; windowY += 24) {
+          for (let windowX = x + 10; windowX < x + w - 6; windowX += 18) ctx.fillRect(windowX, windowY, 6, 9);
+        }
+        ctx.fillStyle = "#182c3f";
+      });
+      ctx.fillStyle = "#263f56";
+      ctx.fillRect(0, 370, width, 190);
+      ctx.strokeStyle = "#87abb2";
+      ctx.lineWidth = 2;
+      for (let y = 392; y < height; y += 24) {
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = "#536f70";
+      ctx.fillRect(104, 324, 58, 44);
+      ctx.fillRect(121, 274, 24, 51);
+      ctx.fillStyle = "#78958a";
+      ctx.beginPath(); ctx.moveTo(111, 321); ctx.lineTo(150, 321); ctx.lineTo(145, 270); ctx.lineTo(137, 252); ctx.lineTo(125, 269); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#d8bd69";
+      ctx.beginPath(); ctx.arc(137, 246, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#f5efdd";
+      ctx.font = "bold 16px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("NEW YORK HARBOR", width / 2, 535);
+    }
+
+    function drawFireworks() {
+      fireworks.forEach((firework) => {
+        const cycle = (elapsed * 0.42 + firework.phase) % 1;
+        const radius = 12 + Math.sin(cycle * Math.PI) * 55;
+        ctx.save();
+        ctx.globalAlpha = 0.35 + (1 - cycle) * 0.65;
+        ctx.strokeStyle = firework.color;
+        ctx.fillStyle = firework.color;
+        ctx.lineWidth = 3;
+        for (let ray = 0; ray < 14; ray++) {
+          const angle = ray * Math.PI * 2 / 14;
+          ctx.beginPath();
+          ctx.moveTo(firework.x + Math.cos(angle) * radius * 0.25, firework.y + Math.sin(angle) * radius * 0.25);
+          ctx.lineTo(firework.x + Math.cos(angle) * radius, firework.y + Math.sin(angle) * radius);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(firework.x + Math.cos(angle) * radius, firework.y + Math.sin(angle) * radius, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+    }
+
+    function drawSlide() {
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(690, 310);
+      ctx.quadraticCurveTo(770, 350, 805, 492);
+      ctx.strokeStyle = "#674b3e";
+      ctx.lineWidth = 58;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(690, 310);
+      ctx.quadraticCurveTo(770, 350, 805, 492);
+      ctx.strokeStyle = "#e28b48";
+      ctx.lineWidth = 46;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(690, 310);
+      ctx.quadraticCurveTo(770, 350, 805, 492);
+      ctx.strokeStyle = "#f6c477";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
     }
 
     function drawBrush(spot, index) {
@@ -396,6 +1091,10 @@
     }
 
     function drawPlayer() {
+      if (level === 2 || level === 3 || level === 6) {
+        drawCrawlingCallen();
+        return;
+      }
       ctx.save();
       ctx.font = "38px serif";
       ctx.textAlign = "center";
@@ -406,30 +1105,465 @@
       ctx.restore();
     }
 
+    function drawCrawlingCallen() {
+      const crawl = Math.sin(elapsed * 12) * 4;
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.fillStyle = "#31403544";
+      ctx.beginPath(); ctx.ellipse(0, 15, 25, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#e9b88c";
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-9, 8); ctx.lineTo(-18, 15 + crawl);
+      ctx.moveTo(8, 8); ctx.lineTo(15, 15 - crawl);
+      ctx.moveTo(-10, 1); ctx.lineTo(-2, 11 - crawl);
+      ctx.moveTo(8, 2); ctx.lineTo(15, 11 + crawl);
+      ctx.stroke();
+      ctx.fillStyle = "#78a9a0";
+      ctx.beginPath(); ctx.ellipse(-3, 2, 17, 11, -0.1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#efc59b";
+      ctx.beginPath(); ctx.arc(13, -7, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#624738";
+      ctx.beginPath(); ctx.arc(12, -12, 11, Math.PI, Math.PI * 1.85); ctx.fill();
+      ctx.fillStyle = "#263b32";
+      ctx.beginPath(); ctx.arc(18, -8, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawDaddy() {
+      const stride = Math.sin(elapsed * 11) * 5;
+      ctx.save();
+      ctx.translate(daddy.x, daddy.y);
+      ctx.fillStyle = "#31403544";
+      ctx.beginPath(); ctx.ellipse(0, 17, 19, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#38464a";
+      ctx.lineWidth = 7;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-6, 12); ctx.lineTo(-8 + stride, 28);
+      ctx.moveTo(6, 12); ctx.lineTo(8 - stride, 28);
+      ctx.stroke();
+      ctx.fillStyle = "#577f82";
+      roundedRect(-12, -12, 24, 28, 8); ctx.fill();
+      ctx.strokeStyle = "#efc59b";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-10, -5); ctx.lineTo(-17 - stride * 0.4, 5);
+      ctx.moveTo(10, -5); ctx.lineTo(17 + stride * 0.4, 5);
+      ctx.stroke();
+      ctx.fillStyle = "#efc59b";
+      ctx.beginPath(); ctx.arc(0, -23, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#49372f";
+      ctx.beginPath(); ctx.arc(0, -26, 11, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#263b32";
+      ctx.beginPath(); ctx.arc(-4, -23, 1.3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawHunter(hunter) {
+      const stride = Math.sin(elapsed * 11 + hunter.y) * 5;
+      ctx.save();
+      ctx.translate(hunter.x, hunter.y);
+      ctx.fillStyle = "#31403544";
+      ctx.beginPath(); ctx.ellipse(0, 17, 19, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#38464a";
+      ctx.lineWidth = 7;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-6, 12); ctx.lineTo(-8 + stride, 28);
+      ctx.moveTo(6, 12); ctx.lineTo(8 - stride, 28);
+      ctx.stroke();
+      ctx.fillStyle = hunter.shirt;
+      roundedRect(-12, -12, 24, 28, 8); ctx.fill();
+      if (hunter.name === "President Donald Trump") {
+        ctx.fillStyle = "#b84c48";
+        ctx.beginPath(); ctx.moveTo(-2, -10); ctx.lineTo(3, -10); ctx.lineTo(1, 4); ctx.closePath(); ctx.fill();
+      }
+      ctx.strokeStyle = "#efc59b";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-10, -5); ctx.lineTo(-17 - stride * 0.4, 5);
+      ctx.moveTo(10, -5); ctx.lineTo(17 + stride * 0.4, 5);
+      ctx.stroke();
+      ctx.fillStyle = "#efc59b";
+      ctx.beginPath(); ctx.arc(0, -23, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = hunter.hair;
+      ctx.beginPath(); ctx.arc(0, -26, 11, Math.PI, Math.PI * 2); ctx.fill();
+      if (hunter.name === "Freya") {
+        ctx.beginPath(); ctx.ellipse(-10, -21, 4, 12, 0.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, -21, 4, 12, -0.1, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "#263b32";
+      ctx.beginPath(); ctx.arc(4, -23, 1.3, 0, Math.PI * 2); ctx.fill();
+      ctx.font = "bold 10px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#fff8e6";
+      const labelOffsets = { Hunter: [-21, -43], Leo: [0, -57], Freya: [21, -43] };
+      const [labelX, labelY] = labelOffsets[hunter.name] || [0, -43];
+      ctx.strokeText(hunter.name, labelX, labelY);
+      ctx.fillStyle = "#263b32";
+      ctx.fillText(hunter.name, labelX, labelY);
+      ctx.restore();
+    }
+
+    function drawCar(x, y, withCallen) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = "#31403544";
+      ctx.beginPath(); ctx.ellipse(0, 19, 70, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#d76550";
+      roundedRect(-66, -22, 132, 39, 12); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-39, -21); ctx.lineTo(-23, -48); ctx.lineTo(30, -48); ctx.lineTo(49, -21); ctx.closePath();
+      ctx.fillStyle = "#e5f0d7";
+      ctx.fill();
+      ctx.fillStyle = "#7cb4b7";
+      ctx.beginPath(); ctx.moveTo(-29, -25); ctx.lineTo(-18, -43); ctx.lineTo(0, -43); ctx.lineTo(0, -25); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(5, -43); ctx.lineTo(27, -43); ctx.lineTo(40, -25); ctx.lineTo(5, -25); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#f5d477";
+      ctx.beginPath(); ctx.ellipse(59, -6, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#963f3b";
+      ctx.beginPath(); ctx.ellipse(-61, -6, 5, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#37434a";
+      ctx.beginPath(); ctx.arc(-39, 15, 14, 0, Math.PI * 2); ctx.arc(39, 15, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e7d8bd";
+      ctx.beginPath(); ctx.arc(-39, 15, 6, 0, Math.PI * 2); ctx.arc(39, 15, 6, 0, Math.PI * 2); ctx.fill();
+
+      if (withCallen) {
+        ctx.fillStyle = "#78a9a0";
+        ctx.beginPath(); ctx.ellipse(1, -22, 10, 12, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#efc59b";
+        ctx.beginPath(); ctx.arc(0, -35, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#624738";
+        ctx.beginPath(); ctx.arc(0, -39, 10, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#efc59b";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(7, -22); ctx.lineTo(19, -31); ctx.stroke();
+        ctx.fillStyle = "#7b402b";
+        roundedRect(16, -43, 12, 17, 3); ctx.fill();
+        ctx.fillStyle = "#fff3d4";
+        ctx.fillRect(17, -37, 10, 7);
+        ctx.fillStyle = "#49372f";
+        ctx.font = "5px Trebuchet MS, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("ROOT", 22, -32);
+      }
+      ctx.restore();
+    }
+
+    function drawPoliceCar(car) {
+      const flash = Math.sin(elapsed * 12 + car.phase) > 0;
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.fillStyle = "#31403544";
+      ctx.beginPath(); ctx.ellipse(0, 18, 53, 7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#315c72";
+      roundedRect(-51, -18, 102, 34, 9); ctx.fill();
+      ctx.fillStyle = "#f1eee0";
+      ctx.fillRect(-28, -16, 54, 6);
+      ctx.fillStyle = "#8fc2c4";
+      roundedRect(-21, -12, 41, 18, 5); ctx.fill();
+      ctx.fillStyle = flash ? "#e45c52" : "#4c83b2";
+      roundedRect(-8, -23, 16, 6, 2); ctx.fill();
+      ctx.fillStyle = flash ? "#4c83b2" : "#e45c52";
+      roundedRect(0, -23, 8, 6, 2); ctx.fill();
+      ctx.fillStyle = "#27343c";
+      ctx.beginPath(); ctx.arc(-31, 14, 11, 0, Math.PI * 2); ctx.arc(31, 14, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#f4f0dc";
+      ctx.beginPath(); ctx.arc(-31, 14, 4, 0, Math.PI * 2); ctx.arc(31, 14, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff4d8";
+      ctx.font = "bold 8px Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("POLICE", 0, 2);
+      ctx.restore();
+    }
+
     function draw() {
       ctx.clearRect(0, 0, width, height);
-      drawBackground();
-      drawPortal();
-      brushes.forEach((collected, index) => {
-        if (!collected) drawBrush(brushSpots[index], index);
-      });
-      bunnies.forEach(drawBunny);
-      drawPlayer();
+      if (level === 2) {
+        drawRoomBackground();
+        drawDaddy();
+        drawPlayer();
+      } else if (level === 3) {
+        drawRoofBackground();
+        drawSlide();
+        hunters.forEach(drawHunter);
+        drawPlayer();
+      } else if (level === 4) {
+        drawGardenBackground();
+        drawCar(carX, 435, inCar);
+        hunters.forEach(drawHunter);
+        if (!inCar) drawPlayer();
+      } else if (level === 5) {
+        drawRoadBackground();
+        police.forEach(drawPoliceCar);
+        drawCar(player.x, player.y, true);
+      } else if (level === 6) {
+        drawFlightBackground();
+        attendants.forEach(drawHunter);
+        drawPlayer();
+      } else if (level === 7) {
+        drawParkBackground();
+        drawStatue();
+        hunters.forEach(drawHunter);
+        drawPlayer();
+      } else if (level === 8) {
+        drawParkBackground();
+        drawStatue();
+        drawObama();
+        drawPlayer();
+      } else if (level === 9) {
+        drawHarborBackground();
+        drawFireworks();
+      } else {
+        drawBackground();
+        drawPortal();
+        brushes.forEach((collected, index) => {
+          if (!collected) drawBrush(brushSpots[index], index);
+        });
+        bunnies.forEach(drawBunny);
+        drawPlayer();
+      }
       if (won) {
         ctx.fillStyle = "#20372ec9";
         ctx.fillRect(15, 15, width - 30, height - 30);
         ctx.textAlign = "center";
         ctx.fillStyle = "#fff5d5";
         ctx.font = "42px Georgia, serif";
-        ctx.fillText("Out of the frame!", width / 2, height / 2 - 7);
+        ctx.fillText(level === 7 ? "A view from the crown!" : level === 6 ? "Welcome to New York!" : level === 4 ? "Fizzy getaway!" : level === 3 ? "Into the front garden!" : "Out of the room!", width / 2, height / 2 - 7);
         ctx.font = "18px Trebuchet MS, sans-serif";
-        ctx.fillText("Callen made it back to the real world.", width / 2, height / 2 + 30);
+        ctx.fillText(level === 7 ? "New York Harbor, from the Statue of Liberty." : level === 6 ? "Australia to America. Callen made it." : level === 4 ? "Callen and his root beer are off!" : level === 3 ? "What a ride!" : "Callen made a clean getaway.", width / 2, height / 2 + 30);
       }
+    }
+
+    function updateRoom(delta) {
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(34, Math.min(width - 34, player.x + directionX / magnitude * 180 * delta));
+      player.y = Math.max(35, Math.min(height - 35, player.y + directionY / magnitude * 180 * delta));
+
+      const chaseX = player.x - daddy.x;
+      const chaseY = player.y - daddy.y;
+      const distance = Math.hypot(chaseX, chaseY) || 1;
+      daddy.x += chaseX / distance * 155 * delta;
+      daddy.y += chaseY / distance * 155 * delta;
+
+      if (elapsed >= graceUntil && Math.hypot(player.x - daddy.x, player.y - daddy.y) < 32) {
+        player = { x: 140, y: 385 };
+        daddy = { x: 45, y: 385 };
+        graceUntil = elapsed + 1.2;
+        updateHud("Daddy caught up! Crawl for the door again!");
+        return;
+      }
+
+      if (player.x > 835 && player.y > 248 && player.y < 430) {
+        startRoofLevel();
+      }
+    }
+
+    function updateRoofLevel(delta) {
+      if (sliding) {
+        slideProgress = Math.min(1, slideProgress + delta / 1.8);
+        const inverse = 1 - slideProgress;
+        player.x = inverse * inverse * 690 + 2 * inverse * slideProgress * 770 + slideProgress * slideProgress * 805;
+        player.y = inverse * inverse * 310 + 2 * inverse * slideProgress * 350 + slideProgress * slideProgress * 492;
+        if (slideProgress === 1) startGardenLevel();
+        return;
+      }
+
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(34, Math.min(700, player.x + directionX / magnitude * 185 * delta));
+      player.y = Math.max(110, Math.min(317, player.y + directionY / magnitude * 185 * delta));
+
+      hunters.forEach((hunter) => {
+        const chaseX = player.x - hunter.x;
+        const chaseY = player.y - hunter.y;
+        const distance = Math.hypot(chaseX, chaseY) || 1;
+        hunter.x += chaseX / distance * hunter.speed * delta;
+        hunter.y += chaseY / distance * hunter.speed * delta;
+      });
+
+      if (elapsed >= graceUntil && hunters.some((hunter) => Math.hypot(player.x - hunter.x, player.y - hunter.y) < 34)) {
+        resetRoofLevel("Hunter or Freya caught up! Try the rooftop again!");
+        return;
+      }
+
+      if (player.x > 660 && player.y > 270) {
+        sliding = true;
+        slideProgress = 0;
+        keys.clear();
+        updateHud("Callen found the slide! Hold on!");
+      }
+    }
+
+    function updateGardenLevel(delta) {
+      if (inCar) {
+        carX += 270 * delta;
+        player.x = carX;
+        hunters.forEach((hunter) => {
+          const chaseX = carX - hunter.x;
+          const chaseY = 435 - hunter.y;
+          const distance = Math.hypot(chaseX, chaseY) || 1;
+          hunter.x += chaseX / distance * hunter.speed * delta;
+          hunter.y += chaseY / distance * hunter.speed * delta;
+        });
+        if (carX > width + 100) {
+          startPoliceLevel();
+        }
+        return;
+      }
+
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(34, Math.min(865, player.x + directionX / magnitude * 185 * delta));
+      player.y = Math.max(270, Math.min(525, player.y + directionY / magnitude * 185 * delta));
+
+      hunters.forEach((hunter) => {
+        const chaseX = player.x - hunter.x;
+        const chaseY = player.y - hunter.y;
+        const distance = Math.hypot(chaseX, chaseY) || 1;
+        hunter.x += chaseX / distance * hunter.speed * delta;
+        hunter.y += chaseY / distance * hunter.speed * delta;
+      });
+
+      if (elapsed >= graceUntil && hunters.some((hunter) => Math.hypot(player.x - hunter.x, player.y - hunter.y) < 34)) {
+        resetGardenLevel("Leo, Hunter, and Freya caught up! Try for the car again!");
+        return;
+      }
+
+      if (Math.hypot(player.x - carX, player.y - 435) < 52) {
+        inCar = true;
+        keys.clear();
+        updateHud("Callen grabbed his root beer! Time for a getaway!");
+      }
+    }
+
+    function updatePoliceLevel(delta) {
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(45, Math.min(865, player.x + directionX / magnitude * 200 * delta));
+      player.y = Math.max(300, Math.min(520, player.y + directionY / magnitude * 200 * delta));
+
+      police.forEach((car) => {
+        const chaseX = player.x - car.x;
+        const chaseY = player.y - car.y;
+        const distance = Math.hypot(chaseX, chaseY) || 1;
+        car.x += chaseX / distance * car.speed * delta;
+        car.y += chaseY / distance * car.speed * delta;
+      });
+
+      if (elapsed >= graceUntil && police.some((car) => Math.hypot(player.x - car.x, player.y - car.y) < 48)) {
+        resetPoliceLevel("The police caught up! Take another run at the airport!");
+        return;
+      }
+
+      if (player.x > 790 && player.y > 320 && player.y < 515) startFlightLevel();
+    }
+
+    function updateFlightLevel(delta) {
+      if (arriving) {
+        arrivalProgress += delta;
+        if (arrivalProgress >= 2.4) startParkLevel();
+        return;
+      }
+
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(65, Math.min(835, player.x + directionX / magnitude * 175 * delta));
+      player.y = Math.max(65, Math.min(510, player.y + directionY / magnitude * 175 * delta));
+
+      attendants.forEach((attendant) => {
+        const chaseX = player.x - attendant.x;
+        const chaseY = player.y - attendant.y;
+        const distance = Math.hypot(chaseX, chaseY) || 1;
+        attendant.x += chaseX / distance * attendant.speed * delta;
+        attendant.y += chaseY / distance * attendant.speed * delta;
+      });
+
+      if (elapsed >= graceUntil && attendants.some((attendant) => Math.hypot(player.x - attendant.x, player.y - attendant.y) < 34)) {
+        resetFlightLevel("The attendants caught up! Try the cabin dash again!");
+        return;
+      }
+
+      if (player.y < 105 && player.x > 385 && player.x < 515) {
+        arriving = true;
+        arrivalProgress = 0;
+        keys.clear();
+        updateHud("New York is in sight! The plane is landing!");
+      }
+    }
+
+    function updateParkLevel(delta) {
+      const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
+      const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      player.x = Math.max(34, Math.min(700, player.x + directionX / magnitude * 190 * delta));
+      player.y = Math.max(265, Math.min(525, player.y + directionY / magnitude * 190 * delta));
+
+      hunters.forEach((hunter) => {
+        const chaseX = player.x - hunter.x;
+        const chaseY = player.y - hunter.y;
+        const distance = Math.hypot(chaseX, chaseY) || 1;
+        hunter.x += chaseX / distance * hunter.speed * delta;
+        hunter.y += chaseY / distance * hunter.speed * delta;
+      });
+
+      if (elapsed >= graceUntil && hunters.some((hunter) => Math.hypot(player.x - hunter.x, player.y - hunter.y) < 34)) {
+        resetParkLevel("President Donald Trump caught up! Run to the statue again!");
+        return;
+      }
+
+      if (player.x > 620 && player.y > 400) startClimbLevel();
+    }
+
+    function updateClimbLevel(delta) {
+      if (keys.has("ArrowUp") || keys.has("w")) climbProgress = Math.min(1, climbProgress + delta * 0.42);
+      player.x = 680 + climbProgress * 105;
+      player.y = 435 - climbProgress * 285;
+      if (climbProgress === 1) startHarborView();
     }
 
     function update(delta) {
       if (won) return;
       elapsed += delta;
+      if (level === 3) {
+        updateRoofLevel(delta);
+        return;
+      }
+      if (level === 4) {
+        updateGardenLevel(delta);
+        return;
+      }
+      if (level === 5) {
+        updatePoliceLevel(delta);
+        return;
+      }
+      if (level === 6) {
+        updateFlightLevel(delta);
+        return;
+      }
+      if (level === 7) {
+        updateParkLevel(delta);
+        return;
+      }
+      if (level === 8) {
+        updateClimbLevel(delta);
+        return;
+      }
+      if (level === 9) return;
+      if (level === 2) {
+        updateRoom(delta);
+        return;
+      }
       const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
       const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
       const inPaint = paints.some((paint) => ((player.x - paint.x) / (paint.rx + 8)) ** 2 + ((player.y - paint.y) / (paint.ry + 8)) ** 2 < 1);
@@ -459,8 +1593,7 @@
       });
 
       if (brushes.every(Boolean) && player.x > 817 && Math.abs(player.y - 280) < 42) {
-        won = true;
-        updateHud("You made it out! Press restart for another round.");
+        startRoomLevel();
       }
     }
 
