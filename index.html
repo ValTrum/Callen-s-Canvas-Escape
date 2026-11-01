@@ -186,6 +186,16 @@
 
     .actions { display: flex; flex: 0 0 auto; gap: 8px; }
 
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font: 12px "Trebuchet MS", Arial, sans-serif;
+    }
+
+    .volume-control input { width: 82px; accent-color: var(--rust); }
+
     .message { min-height: 20px; color: var(--ink); font-size: 13px; }
     .help { color: var(--muted); font-size: 12px; text-align: right; }
     kbd {
@@ -333,6 +343,8 @@
       }
       .underbar { flex-wrap: wrap; gap: 8px; padding-top: 4px; }
       .help { max-width: 100%; text-align: left; }
+      .volume-control { gap: 3px; }
+      .volume-control input { width: 68px; }
     }
 
     @media (any-pointer: coarse) and (orientation: landscape) {
@@ -433,12 +445,16 @@
       <div class="message" id="message" aria-live="polite">Find the three paintbrushes. Watch out for the dust bunnies!</div>
       <div class="help" id="help">Move with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Avoid bunnies · Paint slows you down</div>
       <div class="actions">
+        <button class="reset" id="mute" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
+        <label class="volume-control" for="volume">Volume
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="0.45" aria-label="Volume">
+        </label>
         <button class="reset" id="fullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
         <button class="reset" id="reset" type="button" aria-label="Restart game" title="Restart game">↻</button>
       </div>
     </div>
 
-    <div class="version" aria-label="Version 1.0.8">v1.0.8</div>
+    <div class="version" aria-label="Version 1.0.9">v1.0.9</div>
     </footer>
   </main>
 
@@ -450,6 +466,8 @@
     const message = document.querySelector("#message");
     const timerDisplay = document.querySelector("#timerDisplay");
     const fullscreenButton = document.querySelector("#fullscreen");
+    const muteButton = document.querySelector("#mute");
+    const volumeSlider = document.querySelector("#volume");
     const page = document.querySelector(".page");
     const levelLabel = document.querySelector("#levelLabel");
     const help = document.querySelector("#help");
@@ -490,6 +508,129 @@
     let waiting = false;
     let lastTime = 0;
     let elapsed = 0;
+    let isMuted = false;
+    let wasInPaint = false;
+    const activeAudio = new Set();
+    let ambientAudio = null;
+    let ambientTimer = null;
+
+    function createWavSource(duration, sampleAt) {
+      const sampleRate = 22050;
+      const sampleCount = Math.floor(sampleRate * duration);
+      const bytes = new Uint8Array(44 + sampleCount * 2);
+      const view = new DataView(bytes.buffer);
+      const writeText = (offset, text) => {
+        for (let index = 0; index < text.length; index += 1) bytes[offset + index] = text.charCodeAt(index);
+      };
+      writeText(0, "RIFF");
+      view.setUint32(4, bytes.length - 8, true);
+      writeText(8, "WAVEfmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeText(36, "data");
+      view.setUint32(40, sampleCount * 2, true);
+      for (let index = 0; index < sampleCount; index += 1) {
+        const time = index / sampleRate;
+        const sample = Math.max(-1, Math.min(1, sampleAt(time, duration)));
+        view.setInt16(44 + index * 2, sample * 32767, true);
+      }
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      }
+      return `data:audio/wav;base64,${btoa(binary)}`;
+    }
+
+    const soundSources = {
+      brush: createWavSource(0.72, (time) => {
+        const envelope = Math.exp(-5 * time);
+        return envelope * (Math.sin(2 * Math.PI * 1046 * time) * 0.5 + Math.sin(2 * Math.PI * 1568 * time) * 0.2);
+      }),
+      boop: createWavSource(0.38, (time) => {
+        const envelope = Math.exp(-10 * time);
+        return envelope * (Math.sin(2 * Math.PI * (175 - 75 * time) * time) * 0.65 + Math.sin(2 * Math.PI * 63 * time) * 0.2);
+      }),
+      win: createWavSource(2.4, (time) => {
+        const swell = Math.min(1, time * 5) * Math.max(0, Math.min(1, (2.4 - time) * 2));
+        const cheer = Math.sin(2 * Math.PI * 460 * time) + Math.sin(2 * Math.PI * 590 * time + 0.4) + Math.sin(2 * Math.PI * 730 * time + 1.2);
+        const noise = Math.sin(time * 1171) * Math.sin(time * 2237) * 0.6;
+        return swell * (cheer * 0.15 + noise * 0.16);
+      }),
+      siren: createWavSource(2.4, (time) => {
+        const phase = 2 * Math.PI * (880 * time + 130 * 2.4 / (2 * Math.PI) * (1 - Math.cos(2 * Math.PI * time / 2.4)));
+        return Math.sin(phase) * 0.28 + Math.sin(phase * 2) * 0.06;
+      }),
+      airplane: createWavSource(2.4, (time) => {
+        const fade = Math.min(1, time * 10, (2.4 - time) * 10);
+        const rumble = Math.sin(2 * Math.PI * 78 * time) * 0.42 + Math.sin(2 * Math.PI * 83 * time) * 0.25;
+        const hiss = Math.sin(time * 1711) * Math.sin(time * 2531) * 0.12;
+        return fade * (rumble + hiss);
+      }),
+      kids: createWavSource(1.05, (time) => {
+        const burst = Math.max(0, Math.sin(Math.PI * 4.2 * time));
+        const envelope = Math.pow(burst, 2) * Math.min(1, time * 14, (1.05 - time) * 12);
+        const voice = Math.sin(2 * Math.PI * (520 + 110 * Math.sin(2 * Math.PI * 3 * time)) * time);
+        return envelope * (voice * 0.32 + Math.sin(2 * Math.PI * 1040 * time) * 0.12);
+      })
+    };
+
+    function playSound(name, loop = false) {
+      if (isMuted) return null;
+      const audio = new Audio(soundSources[name]);
+      audio.volume = Number(volumeSlider.value);
+      audio.loop = loop;
+      activeAudio.add(audio);
+      audio.addEventListener("ended", () => activeAudio.delete(audio), { once: true });
+      const playback = audio.play();
+      if (playback && typeof playback.catch === "function") playback.catch(() => activeAudio.delete(audio));
+      return audio;
+    }
+
+    function stopAmbientSound() {
+      if (ambientTimer !== null) clearInterval(ambientTimer);
+      ambientTimer = null;
+      if (ambientAudio) {
+        ambientAudio.pause();
+        activeAudio.delete(ambientAudio);
+        ambientAudio = null;
+      }
+    }
+
+    function updateAmbientSound() {
+      stopAmbientSound();
+      if (isMuted) return;
+      if (level === 5 || level === 6) {
+        ambientAudio = playSound(level === 5 ? "siren" : "airplane", true);
+      } else if (level === 3 || level === 4) {
+        playSound("kids");
+        ambientTimer = setInterval(() => playSound("kids"), 3200);
+      }
+    }
+
+    function updateMuteControl() {
+      muteButton.textContent = isMuted ? "🔇" : "🔊";
+      muteButton.setAttribute("aria-label", isMuted ? "Unmute sound" : "Mute sound");
+      muteButton.title = isMuted ? "Unmute sound" : "Mute sound";
+    }
+
+    function setMuted(muted) {
+      isMuted = muted;
+      if (isMuted) {
+        activeAudio.forEach((audio) => audio.pause());
+        activeAudio.clear();
+        ambientAudio = null;
+        if (ambientTimer !== null) clearInterval(ambientTimer);
+        ambientTimer = null;
+      } else {
+        updateAmbientSound();
+      }
+      updateMuteControl();
+    }
 
     function reset() {
       waiting = true;
@@ -521,10 +662,12 @@
       climbProgress = 0;
       fireworks = [];
       graceUntil = elapsed + 1.5;
+      wasInPaint = false;
       levelLabel.textContent = "Level 1 · A tiny adventure under the bed";
       help.innerHTML = "Move with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Avoid bunnies · Paint slows you down";
       gameCanvas.setAttribute("aria-label", "Level 1: collect three paintbrushes and reach the portal.");
       updateHud("Find the three paintbrushes. Watch out for the dust bunnies!");
+      updateAmbientSound();
     }
 
     function startRoomLevel() {
@@ -538,6 +681,7 @@
       help.innerHTML = "Crawl with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Reach the open door before Daddy catches up";
       gameCanvas.setAttribute("aria-label", "Level 2: crawl Baby Callen to the open doorway while Daddy chases.");
       updateHud("Daddy is right behind you! Crawl to the open door!");
+      updateAmbientSound();
     }
 
     function resetRoofLevel(text) {
@@ -562,6 +706,7 @@
       help.innerHTML = "Move with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Reach the slide to land in the front garden";
       gameCanvas.setAttribute("aria-label", "Level 3: escape Hunter and Freya on the rooftop and slide into the front garden.");
       resetRoofLevel("Hunter and Freya are after you! Get to the slide!");
+      updateAmbientSound();
     }
 
     function resetGardenLevel(text) {
@@ -587,6 +732,7 @@
       help.innerHTML = "Move with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Reach the car before Leo, Hunter, and Freya catch up";
       gameCanvas.setAttribute("aria-label", "Level 4: reach the car in the front garden while Leo, Hunter, and Freya chase.");
       resetGardenLevel("Leo, Hunter, and Freya are right behind you! Get to the car!");
+      updateAmbientSound();
     }
 
     function resetPoliceLevel(text) {
@@ -610,6 +756,7 @@
       help.innerHTML = "Steer with <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Reach the Australia airport";
       gameCanvas.setAttribute("aria-label", "Level 5: drive to the airport while police cars follow.");
       resetPoliceLevel("The police are following! Drive to the airport!");
+      updateAmbientSound();
     }
 
     function resetFlightLevel(text) {
@@ -635,6 +782,7 @@
       help.textContent = "Crawl to the front of the plane while the flight attendants follow";
       gameCanvas.setAttribute("aria-label", "Level 6: crawl through the airplane cabin to arrive in New York.");
       resetFlightLevel("The flight attendants spotted Callen! Head toward New York!");
+      updateAmbientSound();
     }
 
     function resetParkLevel(text) {
@@ -654,6 +802,7 @@
       help.textContent = "Run through the park to the statue while President Donald Trump chases";
       gameCanvas.setAttribute("aria-label", "Level 7: run through Battery Park to the Statue of Liberty while President Donald Trump chases.");
       resetParkLevel("Welcome to New York! President Donald Trump is chasing Callen through the park!");
+      updateAmbientSound();
     }
 
     function startClimbLevel() {
@@ -669,11 +818,14 @@
       gameCanvas.setAttribute("aria-label", "Level 8: climb the Statue of Liberty to meet Barack Obama at the top.");
       updateHud("Barack Obama is waiting at the top!");
       message.innerHTML = "Barack Obama is waiting at the top! Hold <kbd>↑</kbd> or <kbd>W</kbd> to climb!";
+      updateAmbientSound();
     }
 
     function startHarborView() {
       level = 9;
       won = false;
+      updateAmbientSound();
+      playSound("win");
       endingOverlay.hidden = false;
       mobileControls.hidden = true;
       fireworks = [
@@ -1954,6 +2106,8 @@
       const directionX = Number(keys.has("ArrowRight") || keys.has("d")) - Number(keys.has("ArrowLeft") || keys.has("a"));
       const directionY = Number(keys.has("ArrowDown") || keys.has("s")) - Number(keys.has("ArrowUp") || keys.has("w"));
       const inPaint = paints.some((paint) => ((player.x - paint.x) / (paint.rx + 8)) ** 2 + ((player.y - paint.y) / (paint.ry + 8)) ** 2 < 1);
+      if (inPaint && !wasInPaint) playSound("boop");
+      wasInPaint = inPaint;
       const speed = inPaint ? 105 : 190;
       const magnitude = Math.hypot(directionX, directionY) || 1;
       player.x = Math.max(34, Math.min(width - 34, player.x + directionX / magnitude * speed * delta));
@@ -1965,6 +2119,7 @@
         if (bunny.x < 45 || bunny.x > width - 45) bunny.vx *= -1;
         if (bunny.y < 48 || bunny.y > height - 48) bunny.vy *= -1;
         if (elapsed >= graceUntil && Math.hypot(player.x - bunny.x, player.y - bunny.y) < 33) {
+          playSound("boop");
           reset();
           updateHud("A dust bunny caught Callen. Try the canvas again!");
           return;
@@ -1974,6 +2129,7 @@
       brushSpots.forEach((spot, index) => {
         if (!brushes[index] && Math.hypot(player.x - spot.x, player.y - spot.y) < 31) {
           brushes[index] = true;
+          playSound("brush");
           const count = brushes.filter(Boolean).length;
           updateHud(count === 3 ? "The portal is open! Make a dash for the frame." : `Paintbrush found. ${3 - count} more to go!`);
         }
@@ -2007,6 +2163,11 @@
     window.addEventListener("blur", () => keys.clear());
     document.querySelector("#reset").addEventListener("click", reset);
       document.querySelector("#playAgain").addEventListener("click", reset);
+    muteButton.addEventListener("click", () => setMuted(!isMuted));
+    volumeSlider.addEventListener("input", () => {
+      const volume = Number(volumeSlider.value);
+      activeAudio.forEach((audio) => { audio.volume = volume; });
+    });
     document.querySelectorAll(".mobile-controls button").forEach((button) => {
       const direction = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" }[button.dataset.dir];
       button.addEventListener("pointerdown", (event) => {
