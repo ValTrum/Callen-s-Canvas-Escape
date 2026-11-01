@@ -288,6 +288,114 @@
       .ending-overlay { padding: 20px 10px 24px; }
       .ending-overlay h2 { font-size: 26px; }
     }
+
+    @media (any-pointer: coarse) and (orientation: portrait) {
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      }
+
+      .page { width: min(560px, 100%); }
+
+      .page:fullscreen, .page.is-fullscreen {
+        justify-content: flex-start;
+        gap: 12px;
+        overflow-y: auto;
+        padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      }
+
+      .page:fullscreen .frame, .page.is-fullscreen .frame {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+      }
+
+      .page:fullscreen canvas, .page.is-fullscreen canvas {
+        width: 100%;
+        max-width: 100%;
+        max-height: none;
+      }
+
+      .masthead { align-items: flex-start; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+      .brush-count { flex-wrap: wrap; padding: 0; }
+      .frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .frame canvas { grid-area: 1 / 1; }
+      .ending-overlay { grid-area: 1 / 1; }
+      .mobile-controls {
+        position: static;
+        grid-area: 2 / 1;
+        grid-template: repeat(2, 48px) / repeat(3, 48px);
+        justify-self: center;
+      }
+      .underbar { flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+      .help { max-width: 100%; text-align: left; }
+    }
+
+    @media (any-pointer: coarse) and (orientation: landscape) {
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      }
+
+      .page { width: 100%; max-width: 1200px; }
+
+      .page:fullscreen, .page.is-fullscreen {
+        padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      }
+
+      .page:fullscreen .frame, .page.is-fullscreen .frame {
+        display: grid;
+        grid-template-columns: minmax(112px, 24%) minmax(0, 1fr);
+        gap: 12px;
+        width: 100%;
+        max-width: none;
+        margin: auto 0;
+      }
+
+      .page:fullscreen canvas, .page.is-fullscreen canvas {
+        width: min(100%, calc((100dvh - 140px) * 900 / 560));
+        max-width: 100%;
+        max-height: calc(100dvh - 140px);
+        justify-self: center;
+      }
+
+      .masthead { align-items: center; gap: 12px; margin-bottom: 8px; }
+      h1 { font-size: clamp(24px, 5vh, 36px); }
+      .eyebrow { font-size: 10px; }
+      .brush-count { gap: 6px; padding: 0; font-size: 12px; }
+      .frame {
+        display: grid;
+        grid-template-columns: minmax(112px, 24%) minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+      }
+      .frame canvas {
+        grid-area: 1 / 2;
+        width: min(100%, calc((100dvh - 140px) * 900 / 560));
+        max-height: calc(100dvh - 140px);
+        justify-self: center;
+      }
+      .ending-overlay { grid-area: 1 / 2; }
+      .mobile-controls {
+        position: static;
+        grid-area: 1 / 1;
+        grid-template: repeat(2, clamp(44px, 11vh, 52px)) / repeat(3, clamp(44px, 11vh, 52px));
+        justify-self: center;
+      }
+      .underbar { gap: 8px; padding-top: 8px; }
+      .message, .help { font-size: 11px; }
+      .help { max-width: 42vw; }
+    }
+
+    @media (any-pointer: coarse) and (orientation: portrait) and (min-width: 700px) {
+      .page { width: min(900px, 100%); }
+    }
   </style>
 </head>
 <body>
