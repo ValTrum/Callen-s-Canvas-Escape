@@ -34,6 +34,55 @@
 
     .page { width: min(1050px, 100%); margin: 0 auto; }
 
+    .page:fullscreen {
+      width: 100%;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .page.is-fullscreen {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      width: 100%;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .page:fullscreen .frame, .page.is-fullscreen .frame {
+      display: block;
+      flex: 0 1 auto;
+      align-self: center;
+      width: fit-content;
+      max-width: 100%;
+      min-height: 0;
+      margin: auto;
+    }
+
+    .page:fullscreen canvas, .page.is-fullscreen canvas {
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      max-height: calc(100vh - 220px);
+      max-height: calc(100dvh - 220px);
+    }
+
     .masthead {
       display: flex;
       align-items: end;
@@ -96,6 +145,8 @@
       padding: 13px 2px 0;
     }
 
+    .actions { display: flex; flex: 0 0 auto; gap: 8px; }
+
     .message { min-height: 20px; color: var(--ink); font-size: 13px; }
     .help { color: var(--muted); font-size: 12px; text-align: right; }
 
@@ -117,31 +168,46 @@
 
     .reset:hover { transform: rotate(-35deg); background: white; }
     .reset:focus-visible, .mobile-controls button:focus-visible { outline: 3px solid #c45c3c; outline-offset: 3px; }
+    #fullscreen { font-size: 22px; }
+    #fullscreen:hover { transform: none; }
 
     .mobile-controls {
-      position: fixed;
-      z-index: 5;
-      left: max(16px, env(safe-area-inset-left));
-      bottom: max(16px, env(safe-area-inset-bottom));
+      position: absolute;
+      z-index: 3;
+      left: clamp(24px, 3vw, 40px);
+      bottom: clamp(24px, 3vw, 40px);
       display: grid;
-      grid-template: repeat(2, 42px) / repeat(3, 48px);
+      grid-template: repeat(2, 50px) / repeat(3, 50px);
       justify-content: center;
-      gap: 5px;
-      padding: 6px;
-      border: 1px solid #a7987a;
-      border-radius: 6px;
-      background: #f2ead8e8;
-      box-shadow: 0 2px 8px #49332030;
+      gap: 4px;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .mobile-controls button {
-      border: 1px solid #a7987a;
-      border-radius: 4px;
-      color: var(--ink);
-      background: #fffaf0;
-      font-size: 19px;
+      border: 2px solid #ffffff99;
+      border-radius: 5px;
+      color: #fff;
+      background: #1d292f66;
+      box-shadow: 0 2px 5px #10181d55;
+      font-size: 25px;
+      font-weight: 700;
+      line-height: 1;
+      text-shadow: 0 1px 3px #10181dcc;
+      touch-action: none;
+      -webkit-appearance: none;
+      appearance: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
     }
+
+    .mobile-controls button:active { background: #1d292f99; }
 
     .mobile-controls [data-dir="up"] { grid-area: 1 / 2; }
     .mobile-controls [data-dir="left"] { grid-area: 2 / 1; }
@@ -187,21 +253,24 @@
 
     <section class="frame" aria-label="Game canvas framed in wood">
       <canvas id="game" width="900" height="560" aria-label="Level 1: collect three paintbrushes and reach the portal."></canvas>
+      <div class="mobile-controls" aria-label="Touch movement controls">
+        <button type="button" data-dir="up" aria-label="Move up">↑</button>
+        <button type="button" data-dir="left" aria-label="Move left">←</button>
+        <button type="button" data-dir="down" aria-label="Move down">↓</button>
+        <button type="button" data-dir="right" aria-label="Move right">→</button>
+      </div>
     </section>
 
     <div class="underbar">
       <div class="message" id="message" aria-live="polite">Find the three paintbrushes. Watch out for the dust bunnies!</div>
       <div class="help" id="help">Move with arrow keys or WASD · Avoid bunnies · Paint slows you down</div>
-      <button class="reset" id="reset" type="button" aria-label="Restart game" title="Restart game">↻</button>
+      <div class="actions">
+        <button class="reset" id="fullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
+        <button class="reset" id="reset" type="button" aria-label="Restart game" title="Restart game">↻</button>
+      </div>
     </div>
 
-    <div class="mobile-controls" aria-label="Touch movement controls">
-      <button type="button" data-dir="up" aria-label="Move up">↑</button>
-      <button type="button" data-dir="left" aria-label="Move left">←</button>
-      <button type="button" data-dir="down" aria-label="Move down">↓</button>
-      <button type="button" data-dir="right" aria-label="Move right">→</button>
-    </div>
-    <div class="version" aria-label="Version 1.0.1">v1.0.1</div>
+    <div class="version" aria-label="Version 1.0.3">v1.0.3</div>
   </main>
 
   <script>
@@ -210,6 +279,8 @@
     const brushIcons = document.querySelector("#brushIcons");
     const brushTotal = document.querySelector("#brushTotal");
     const message = document.querySelector("#message");
+    const fullscreenButton = document.querySelector("#fullscreen");
+    const page = document.querySelector(".page");
     const levelLabel = document.querySelector("#levelLabel");
     const help = document.querySelector("#help");
     const gameCanvas = document.querySelector("#game");
@@ -1618,9 +1689,47 @@
     document.querySelector("#reset").addEventListener("click", reset);
     document.querySelectorAll(".mobile-controls button").forEach((button) => {
       const direction = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" }[button.dataset.dir];
-      button.addEventListener("pointerdown", (event) => { event.preventDefault(); keys.add(direction); button.setPointerCapture(event.pointerId); });
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        keys.add(direction);
+        button.setPointerCapture(event.pointerId);
+        if (event.pointerType === "touch") button.blur();
+      });
       ["pointerup", "pointercancel", "lostpointercapture"].forEach((name) => button.addEventListener(name, () => keys.delete(direction)));
+      button.addEventListener("contextmenu", (event) => event.preventDefault());
     });
+
+    function updateFullscreenButton() {
+      const active = document.fullscreenElement === page || document.webkitFullscreenElement === page || page.classList.contains("is-fullscreen");
+      fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+      fullscreenButton.title = active ? "Exit fullscreen" : "Enter fullscreen";
+    }
+
+    async function toggleFullscreen() {
+      const nativeElement = document.fullscreenElement || document.webkitFullscreenElement;
+      if (nativeElement === page) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else if (page.classList.contains("is-fullscreen")) {
+        page.classList.remove("is-fullscreen");
+      } else {
+        const requestFullscreen = page.requestFullscreen || page.webkitRequestFullscreen;
+        if (requestFullscreen) {
+          try {
+            await requestFullscreen.call(page);
+          } catch {
+            page.classList.add("is-fullscreen");
+          }
+        } else {
+          page.classList.add("is-fullscreen");
+        }
+      }
+      updateFullscreenButton();
+    }
+
+    fullscreenButton.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", updateFullscreenButton);
+    document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
 
     reset();
     window.addEventListener("resize", resize);
